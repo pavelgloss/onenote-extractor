@@ -1,0 +1,25 @@
+{
+  "name": "onenote-extractor",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "ts-node src/index.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@seald-io/nedb": "^4.0.4",
+    "axios": "^1.7.3",
+    "express": "^4.19.2",
+    "open": "^10.1.0",
+    "qs": "^6.13.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/nedb": "^1.8.16",
+    "@types/qs": "^6.9.15",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
+  }
+}

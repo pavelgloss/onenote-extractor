@@ -1,0 +1,62 @@
+# in progress / deprecated
+index22--to be deleted.ts
+aaaaaaa.xxts
+
+# config / .env / secrets
+config.ts
+
+# Pavel notes related files / databases
+/db-backup
+/db-consistency-test
+statistics.txt
+notes-dump
+db-notebooks.db
+db-pages.db
+db-sections.db
+example-notebook.json
+example-notebooks.json
+example-page.json
+example-pages.json
+example-section.json
+example-sections.json
+
+
+
+# compiled output
+/dist
+/node_modules
+/build
+
+package-lock.json
+yarn.lock
+
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+
+# Tests
+/coverage
+/.nyc_output
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+
+# temp directory
+.temp
+.tmp
