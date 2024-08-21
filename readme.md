@@ -27,6 +27,8 @@ use expand
   Call GET ~/api/v1.0/me/notes/notebooks?$expand=sections,sectionGroups($expand=sections)
 
 try note tags
+```
     <p data-tag="to-do:completed" data-id="prep">Till garden bed</p>
     <p data-tag="to-do" data-id="spring">Plant peas and spinach</p>
     <p data-tag="to-do" data-id="summer">Plant tomatoes and peppers</p>
+```
