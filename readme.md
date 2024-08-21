@@ -1,5 +1,6 @@
 How to build the project
 --------------------------
+
 1) npm install
 2) rename config.sample.ts to config.ts and fill your credentials
 3) "npm run start"  (which runs ts-node)
