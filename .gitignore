@@ -15,6 +15,7 @@ db-notebooks.db
 db-pages.db
 db-sections.db
 db-pages-content.db
+db-content-not-found.txt
 example-notebook.json
 example-notebooks.json
 example-page.json

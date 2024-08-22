@@ -4,6 +4,7 @@ import { exchangeAuthCodeForAccessToken, getAuthUrl } from './services/authServi
 import { OneNoteExtractor } from './services/oneNoteExtractor';
 
 import { createLogger, LogLevel } from './utils/logger';
+import { OpenAIService } from './services/OpenAIService';
 
 const logger = createLogger(LogLevel.DEBUG);
 
@@ -37,7 +38,7 @@ app.get('/microsoft-authorize', async (req: Request, res: Response) => {
     // caution: this will load all notes and pages, and build the database
     // oneNoteExtractor.loadNotesAndBuildDatabase();
     // ------------------------------------------------------------------
-    
+
     oneNoteExtractor.loadPagesContentAndBuildDatabase();
 
 
@@ -62,6 +63,19 @@ app.get('/microsoft-authorize', async (req: Request, res: Response) => {
       const oneNoteExtractor = new OneNoteExtractor();
       // await oneNoteExtractor.checkPagesIntegrity();
       // oneNoteExtractor.createHtmlPages();
+
+
+
+      // Initialize the service with a system prompt
+      const openAIService = new OpenAIService("You are a helpful assistant that tells jokes.");
+
+      // Example of generating a joke about Chuck Norris
+
+      console.log('Tell me jokes about Chuck Norris');
+      const joke = await openAIService.generateResponse("Tell me jokes about Chuck Norris");
+      console.log(joke);
+
+
 
 
 
