@@ -8,11 +8,13 @@ config.ts
 # Pavel notes related files / databases
 /db-backup
 /db-consistency-test
+/html-pages
 statistics.txt
 notes-dump
 db-notebooks.db
 db-pages.db
 db-sections.db
+db-pages-content.db
 example-notebook.json
 example-notebooks.json
 example-page.json

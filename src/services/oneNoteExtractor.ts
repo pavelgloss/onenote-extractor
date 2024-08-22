@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { config } from '../config';
-import { GraphApiResponse, Notebook, Page, Section, SectionGroup } from '../types/graphTypes';
+import { GraphApiResponse, Notebook, Page, Section, SectionGroup, StoredPageContent } from '../types/graphTypes';
 const Datastore = require('@seald-io/nedb');
 
 
@@ -30,6 +30,7 @@ export class OneNoteExtractor {
         this.dbNotebooks.loadDatabase();
         this.dbSections.loadDatabase();
         this.dbPages.loadDatabase();
+        this.dbPagesContent.loadDatabase();
     }
 
     /** 
@@ -121,26 +122,68 @@ export class OneNoteExtractor {
 
     }
 
+    // extract "6501ad45c6e64b18a4c6b584f2fc2199" from pageId string like "0-6501ad45c6e64b18a4c6b584f2fc2199!1-96CCEE3E8641EB68!82646"
+    private extractIdentifierFromPageId(pageId: string): string {
+        const parts = pageId.split('!');
+
+        const id = parts[0];
+        return id;
+    }
+
+    async createHtmlPages() {
+        const pagesContentList = await this.dbPagesContent.findAsync({}) as StoredPageContent[];
+
+        for (const pageContent of pagesContentList) {
+            const htmlContent = pageContent.content;
+            const htmlFileName = this.extractIdentifierFromPageId(pageContent.pageId) + '.html';
+
+            // save to file
+            const fs = require('fs');
+
+            fs.writeFileSync('html-pages/' + htmlFileName, htmlContent);
+        }
+    }
+
     /**
      * Load all pages from the database and load content for each page from the onenote API
      * and save the each content to the database
      */
     async loadPagesContentAndBuildDatabase() {
         const pages = await this.dbPages.findAsync({}) as Page[];
+        const notFoundPages: string[] = [];
 
         console.log('Total pages in the database: ' + pages.length);
 
         for (const page of pages) {
+            const existingContent = await this.dbPagesContent.findAsync({ pageId: page.id });
+            if (existingContent.length > 0) {
+                console.log('Page content already exists in database: ' + page.title);
+                continue;
+            }
+            
             const pageContent: string = await this.getPageContent(page.id);
+
+            if (pageContent === null) {
+                console.log('Page content not found: ' + page.title);
+                notFoundPages.push(page.id + " " + page.title);
+                continue;
+            }
 
             let contentDocument = {
                 "pageId": page.id,
+                "title": page.title,
                 "content": pageContent
             };
 
             await this.dbPagesContent.insertAsync(contentDocument);
             console.log('Page content saved: ' + page.title);
         }
+
+        // print pages not found
+        console.log('Pages not found:');
+        notFoundPages.forEach(page => {
+            console.log('  ' + page);
+        });
     }
 
 
@@ -164,7 +207,14 @@ export class OneNoteExtractor {
                 break;
 
             } catch (error) {
-                //console.log('Error fetching data from Graph API: ' + error.message);
+                console.log('Error fetching data from Graph API: ' + error.message);
+                // get status code
+                
+                // if status is 404
+                if (error.response.status === 404) {
+                    console.log('Error 404: Resource not found');
+                    return null;
+                }
 
                 // if the response is 429 Too Many Requests
                 // a better way would be to read header Retry-After: xx in the response and wait for that time (in seconds)
@@ -182,6 +232,8 @@ export class OneNoteExtractor {
 
         return response.data;
     }
+
+    
 
     async getPageContent(pageId: string): Promise<string> {
         const apiEndpoint = `${config.graphApiUrl}/pages/${pageId}/content`;

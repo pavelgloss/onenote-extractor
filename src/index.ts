@@ -33,8 +33,11 @@ app.get('/microsoft-authorize', async (req: Request, res: Response) => {
     console.log('Access token:', accessToken);
 
     const oneNoteExtractor = new OneNoteExtractor(accessToken);
+
+    // caution: this will load all notes and pages, and build the database
     // oneNoteExtractor.loadNotesAndBuildDatabase();
-    //oneNoteExtractor.getAllPages();
+    // ------------------------------------------------------------------
+    
     oneNoteExtractor.loadPagesContentAndBuildDatabase();
 
 
@@ -56,8 +59,9 @@ app.get('/microsoft-authorize', async (req: Request, res: Response) => {
 
       console.log('some other message');
 
-      // const oneNoteExtractor = new OneNoteExtractor();
+      const oneNoteExtractor = new OneNoteExtractor();
       // await oneNoteExtractor.checkPagesIntegrity();
+      // oneNoteExtractor.createHtmlPages();
 
 
 

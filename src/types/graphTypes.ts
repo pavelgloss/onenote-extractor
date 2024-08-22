@@ -94,6 +94,13 @@ export interface Page {
   "parentSection@odata.context"?: string;
 }
 
+// this is my interface for the content of a page, not OneNote's API response
+export interface StoredPageContent {
+  pageId: string;
+  title: string;
+  content: string;
+}
+
 export interface GraphApiResponse<T> {
   value: T[];
   "@odata.nextLink"?: string;
