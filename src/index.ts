@@ -2,11 +2,9 @@ import express, { Request, Response } from 'express';
 import { config } from './config';
 import { exchangeAuthCodeForAccessToken, getAuthUrl } from './services/authService';
 import { OneNoteExtractor } from './services/oneNoteExtractor';
-
-import { createLogger, LogLevel } from './utils/logger';
+import { logger } from './utils/logger';
 import { OpenAIService } from './services/OpenAIService';
 
-const logger = createLogger(LogLevel.DEBUG);
 
 
 const app = express();
@@ -39,8 +37,7 @@ app.get('/microsoft-authorize', async (req: Request, res: Response) => {
     // oneNoteExtractor.loadNotesAndBuildDatabase();
     // ------------------------------------------------------------------
 
-    oneNoteExtractor.loadPagesContentAndBuildDatabase();
-
+    oneNoteExtractor.loadPagesContentAndContinueBuildingDatabase();
 
     res.send(`
       <h1>Authorization successful</h1>
@@ -60,22 +57,24 @@ app.get('/microsoft-authorize', async (req: Request, res: Response) => {
 
       console.log('some other message');
 
-      const oneNoteExtractor = new OneNoteExtractor();
       // await oneNoteExtractor.checkPagesIntegrity();
       // oneNoteExtractor.createHtmlPages();
-
-
-
+      
+      
+      
       // Initialize the service with a system prompt
-      const openAIService = new OpenAIService("You are a helpful assistant that tells jokes.");
-
-      // Example of generating a joke about Chuck Norris
-
-      console.log('Tell me jokes about Chuck Norris');
-      const joke = await openAIService.generateResponse("Tell me jokes about Chuck Norris");
-      console.log(joke);
-
-
+      const openAIService = new OpenAIService(
+        `You are an AI specialized in analyzing and categorizing content from OneNote pages. You are consise, accurate and structured.`
+      );
+      
+      
+      const oneNoteExtractor = new OneNoteExtractor();
+      oneNoteExtractor.enrichContentWithClassification(openAIService);
+      
+      
+      // console.log('Tell me jokes about Chuck Norris');
+//      const joke = await openAIService.generateResponse("Tell me jokes about Chuck Norris");
+      // console.log(joke);
 
 
 

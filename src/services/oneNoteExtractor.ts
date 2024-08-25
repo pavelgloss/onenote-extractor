@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { config } from '../config';
 import { GraphApiResponse, Notebook, Page, Section, SectionGroup, StoredPageContent } from '../types/graphTypes';
+import { OpenAIService } from './OpenAIService';
+import { logger } from '../utils/logger';
 const Datastore = require('@seald-io/nedb');
 
 
@@ -122,6 +124,80 @@ export class OneNoteExtractor {
 
     }
 
+    async enrichContentWithClassification(openAIService: OpenAIService) {
+        const contentList = await this.dbPagesContent.findAsync({}) as StoredPageContent[];
+
+        for (const doc of contentList) {
+            if (doc.content.trim() !== '') {
+                const userPrompt = `
+Analyze content of onenote page (note). Define categories like business, product management, buy books, product idea, ai courses, dev learn and much more, according to what is the content of the note.
+
+Figure out if note contains some project/project idea, MVP or business idea/concept, or experiment to validate or measure market demand of some product idea.
+I am really interested in collecting all product and business ideas, which might be vital to build some SaaS product (it can be micro SaaS) or build a company. 
+Identify such notes with businessPriority 0 to 100 (100 means it definitely contains information about some potential project / saas product to be build / business to try / experiment / mvp to build). 
+
+Many notes combines a lot of topics, urls, snippets etc. Determine chaotic level from 0 to 100 (0 is just one topic, very structured note, 100 is very chaotic with many topics combined.
+Put effort into recognizing if note contains mention about AI, LLM, language models, ai agents, gpt, openai, etc. and classify it as AI related note with field "aiRelated" set to true (or false otherwise).
+
+Output will be json object. Analysis explanation (or any messages related to) classification / businessPriority / aiRelatedInfo / chaoticLevel / classificationInfo / businessPriorityInfo / aiRelatedInfo / chaoticLevelInfo will be provided in the output json object in dedicated fields.
+
+Create a structured response in json format with always provided fields: classification, businessPriority, aiRelated, chaoticLevel, classificationInfo, businessPriorityInfo, aiRelatedInfo, chaoticLevelInfo.
+Example of correct output:
+{"classification": ["product management", "business", "developer tools"],
+"businessPriority": 50,
+"aiRelated": true,
+"chaoticLevel": 80,
+"classificationInfo": "The note discusses job advertisements and provides critical commentary on their content, which fits into business and job market analysis. Additionally, it reflects on how job postings may influence potential candidates, which can relate to product management in terms of human resources tools or SaaS job platforms.",
+"businessPriorityInfo": "Set to **70** because the note indicates ongoing development (Admin console features, coding requirements) that could lead towards an MVP for a business product. It shows significant potential for realizing an 
+idea, with enough structure to suggest its viability in a SaaS context.",
+"aiRelatedInfo": some explanation or additional message,
+"chaoticLevelInfo": "Rated **60**. While it does contain several topics, they are related and structured around the development of an admin console, which gives the note some cohesion despite having various details mentioned."}
+
+Example of wrong output1 - not all fields are present:
+{"classification": ["product management", "business", "developer tools"],
+"businessPriority": 50,
+"aiRelated": false}
+
+Example of wrong output2 - addditional textual message mixed with json object:
+some explanation or additional message instead of solo json object, {"classification": ["product management", "business", "developer tools"],
+"businessPriority": 50,
+"chaoticLevel": 80}
+
+Input note content for processing:
+"""
+${doc.content}
+"""`;
+                try {
+                    const message = await openAIService.generateResponse(userPrompt);
+                    logger.info('response: ', message);
+                    logger.info('***********************************************************************');
+                } catch (error) {
+                    logger.error('Error during classification:', error);
+                    logger.info('eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
+                }
+                
+                // doc['classification'] = classification;
+               
+                
+            } else {
+                logger.warn('empty content');
+            }
+
+            // await this.dbPagesContent.updateAsync({ _id: doc["_id"] }, doc);
+
+
+
+            // await this.dbPagesContent.updateAsync(
+            //     //{ _id: pageContent["_id"] },
+            //     { pageId: pageContent.pageId },
+            //     { $set: { "content": pageContent.content + "---" + pageContent["_id"] } },
+            //     // { upsert: false, multi: false}  
+            // );
+        }
+
+    }
+
+
     // extract "6501ad45c6e64b18a4c6b584f2fc2199" from pageId string like "0-6501ad45c6e64b18a4c6b584f2fc2199!1-96CCEE3E8641EB68!82646"
     private extractIdentifierFromPageId(pageId: string): string {
         const parts = pageId.split('!');
@@ -146,9 +222,9 @@ export class OneNoteExtractor {
 
     /**
      * Load all pages from the database and load content for each page from the onenote API
-     * and save the each content to the database
+     * and continue adding and saving each content to the database
      */
-    async loadPagesContentAndBuildDatabase() {
+    async loadPagesContentAndContinueBuildingDatabase() {
         const pages = await this.dbPages.findAsync({}) as Page[];
         const notFoundPages: string[] = [];
 
@@ -160,7 +236,7 @@ export class OneNoteExtractor {
                 console.log('Page content already exists in database: ' + page.title);
                 continue;
             }
-            
+
             const pageContent: string = await this.getPageContent(page.id);
 
             if (pageContent === null) {
@@ -209,7 +285,7 @@ export class OneNoteExtractor {
             } catch (error) {
                 console.log('Error fetching data from Graph API: ' + error.message);
                 // get status code
-                
+
                 // if status is 404
                 if (error.response.status === 404) {
                     console.log('Error 404: Resource not found');
@@ -233,7 +309,7 @@ export class OneNoteExtractor {
         return response.data;
     }
 
-    
+
 
     async getPageContent(pageId: string): Promise<string> {
         const apiEndpoint = `${config.graphApiUrl}/pages/${pageId}/content`;
@@ -246,7 +322,7 @@ export class OneNoteExtractor {
         const apiEndpoint = `${config.graphApiUrl}/notebooks`;
         // const data = await this.getDataFromGraphApi<Notebook>(apiEndpoint);
         const data: GraphApiResponse<Notebook> = await this.getDataFromGraphApiInternal(apiEndpoint);
-                                 
+
         return data.value;
     }
 
@@ -276,7 +352,7 @@ export class OneNoteExtractor {
         while (nextLink) {
 
             // const data = await this.getDataFromGraphApi<Page>(nextLink);     
-            
+
             // this can throw an error ERR_BAD_REQUEST   429 Too Many Requests
             const data: GraphApiResponse<Page> = await this.getDataFromGraphApiInternal(nextLink);
 
