@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { logger } from '../utils/logger';
 import { config } from '../config';
 
 export class OpenAIService {
@@ -12,7 +13,7 @@ export class OpenAIService {
         this.systemPrompt = systemPrompt;
     }
 
-    async generateResponse(userPrompt: string, maxTokens?: number): Promise<string> {
+    async generateResponse(userPrompt: string, maxTokens?: number): Promise<string | null> {
         const response = await this.openai.chat.completions.create({
             model: "gpt-4o-mini", // Specify the model
             messages: [
@@ -28,6 +29,10 @@ export class OpenAIService {
 
         });
 
-        return response.choices[0]?.message?.content?.trim() || "No response";
+        if (response.choices.length != 1) {
+            logger.error('response.choices.length:', response.choices.length);
+        }
+
+        return response.choices[0]?.message?.content?.trim() || null;
     }
 }
