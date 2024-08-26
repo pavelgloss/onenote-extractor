@@ -72,7 +72,7 @@ app.get('/microsoft-authorize', async (req: Request, res: Response) => {
       
       
       const oneNoteExtractor = new OneNoteExtractor();
-      oneNoteExtractor.enrichContentWithClassification(openAIService);
+      oneNoteExtractor.analyzeNotProcessedNotesAndAddToDB(openAIService);
       
       
       // console.log('Tell me jokes about Chuck Norris');

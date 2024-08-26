@@ -6,6 +6,22 @@ import { logger } from '../utils/logger';
 import { userPrompts } from '../prompts/userPrompts';
 const Datastore = require('@seald-io/nedb');
 
+interface StoredAnalyzedContent {
+    pageId: string;
+    title: string;   // duplicate
+
+    classification: string[];
+    businessPriority: number;
+    aiRelated: boolean;
+    chaoticLevel: number;
+    classificationInfo: string;
+    businessPriorityInfo: string;
+    aiRelatedInfo: string;
+    chaoticLevelInfo: string;
+
+    refusal: string | null;
+    finishReason: string;
+}
 
 export class OneNoteExtractor {
     private readonly accessToken: string;
@@ -13,6 +29,7 @@ export class OneNoteExtractor {
     private readonly dbSections: any;
     private readonly dbPages: any;
     private readonly dbPagesContent: any;
+    private readonly dbPagesContentAnalyzed: any;
 
     // examples nedb
     // await this.db.findAsync({ url: url });
@@ -26,6 +43,7 @@ export class OneNoteExtractor {
         this.dbSections = new Datastore({ filename: 'db-sections.db', corruptAlertThreshold: 0 });
         this.dbPages = new Datastore({ filename: 'db-pages.db', corruptAlertThreshold: 0 });
         this.dbPagesContent = new Datastore({ filename: 'db-pages-content.db', corruptAlertThreshold: 0 });
+        this.dbPagesContentAnalyzed = new Datastore({ filename: 'db-pages-content-analyzed.db', corruptAlertThreshold: 0 });
 
         // await this.dbNotebooks.loadDatabaseAsync();
 
@@ -34,6 +52,7 @@ export class OneNoteExtractor {
         this.dbSections.loadDatabase();
         this.dbPages.loadDatabase();
         this.dbPagesContent.loadDatabase();
+        this.dbPagesContentAnalyzed.loadDatabase();
     }
 
     /** 
@@ -125,7 +144,12 @@ export class OneNoteExtractor {
 
     }
 
-    async enrichContentWithClassification(openAIService: OpenAIService) {
+    /**
+     * Analyze all notes that were not analyzed yet and add them to the database
+     * Adding into collection db-pages-content-analyzed  (1:1 relation with db-pages-content collection)
+     * @param openAIService 
+     */
+    async analyzeNotProcessedNotesAndAddToDB(openAIService: OpenAIService) {
         const contentList = await this.dbPagesContent.findAsync({}) as StoredPageContent[];
 
         for (const doc of contentList) {
@@ -134,17 +158,43 @@ export class OneNoteExtractor {
             if (doc.content?.trim() !== '') {
                 const userPrompt = userPrompts.v3(doc.content);
 
+                // search if content was already analyzed
+                const existingAnalyzedContent = await this.dbPagesContentAnalyzed.findAsync({ pageId: doc.pageId }) as StoredAnalyzedContent[];
+                if (existingAnalyzedContent.length > 0) {
+                    logger.info('Content already analyzed, skipping');
+                    continue;
+                }
+
                 try {
                     const respMessage = await openAIService.generateResponse(userPrompt);
 
                     if (respMessage?.jsonMessage !== null) {
+                        logger.info('response: ', respMessage?.jsonMessage);
 
                         // validate json
                         let parsedJson: any;
                         try {
                             parsedJson = JSON.parse(respMessage?.jsonMessage as string);
 
-                            // TODO save all enrichment data to the database, into separate collection, with finishReason and refusal
+                            // TODO add into analyzed collection
+                            const analyzedContent: StoredAnalyzedContent = {
+                                pageId: doc.pageId,
+                                title: doc.title,
+                                classification: parsedJson.classification,
+                                businessPriority: parsedJson.businessPriority,
+                                aiRelated: parsedJson.aiRelated,
+                                chaoticLevel: parsedJson.chaoticLevel,
+                                classificationInfo: parsedJson.classificationInfo,
+                                businessPriorityInfo: parsedJson.businessPriorityInfo,
+                                aiRelatedInfo: parsedJson.aiRelatedInfo,
+                                chaoticLevelInfo: parsedJson.chaoticLevelInfo,
+                                refusal: respMessage!.refusal ?? null,
+                                finishReason: respMessage!.finishReason,
+                            };
+
+                            // insert async 
+                            await this.dbPagesContentAnalyzed.insertAsync(analyzedContent);
+                            logger.info('Content analyzed and saved to database');
 
                         } catch (error) {
                             logger.error('Failed to parse response as JSON:', error);
@@ -154,7 +204,6 @@ export class OneNoteExtractor {
                         logger.error('NULL message from openai service');
                     }
 
-                    logger.info('response: ', respMessage?.jsonMessage);
                     logger.info('***********************************************************************');
 
                 } catch (error) {
@@ -168,7 +217,7 @@ export class OneNoteExtractor {
                 }
 
             } else {
-                logger.warn('empty content');
+                logger.info('empty content');
             }
 
             // await this.dbPagesContent.updateAsync({ _id: doc["_id"] }, doc);

@@ -42,6 +42,15 @@ and is stored in document database
 TODO
 ---------------------
 
+version and test analyzed result
+
+connectors / integrations
+  - evernote connector
+  - notion
+  - obsidian local file
+  - obsidian api
+  - onenote connector (done)
+
 get refresh token  (AAA)
   problem is that access token works for one hour only 
   and the response (when exchanging auth code for access token) dont contain refresh token
