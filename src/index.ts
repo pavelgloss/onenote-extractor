@@ -60,6 +60,9 @@ app.get('/microsoft-authorize', async (req: Request, res: Response) => {
       // await oneNoteExtractor.checkPagesIntegrity();
       // oneNoteExtractor.createHtmlPages();
       
+      logger.info("                                                                                                  ");
+      logger.info("********************************** NEW START *****************************************************");
+      logger.info("..................................................................................................");
       
       
       // Initialize the service with a system prompt

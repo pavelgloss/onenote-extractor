@@ -21,6 +21,7 @@ export class OpenAIService {
                 { role: "user", content: userPrompt }
             ],
             max_tokens: maxTokens,
+            response_format: {type: "json_object"},
 
             //   temperature: 0.7, // Control the randomness of the response
             // seed: 0, // Seed value for random number generation
