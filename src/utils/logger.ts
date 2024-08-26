@@ -28,6 +28,11 @@ export class Logger {
 
       // Log to file
       fs.appendFileSync(this.logFilePath, formattedMessage + '\n');
+
+      // duplicate log into error.log file if level is WARN or ERROR
+      if (level >= LogLevel.WARN) {
+        fs.appendFileSync('error.log', formattedMessage + '\n');
+      }
     }
   }
 

@@ -129,29 +129,44 @@ export class OneNoteExtractor {
         const contentList = await this.dbPagesContent.findAsync({}) as StoredPageContent[];
 
         for (const doc of contentList) {
-            if (doc.content.trim() !== '') {
-                const userPrompt = userPrompts.v2(doc.content);
+            logger.info('pageId: ' + doc.pageId + ',  title: ' + doc.title);
+
+            if (doc.content?.trim() !== '') {
+                const userPrompt = userPrompts.v3(doc.content);
+
                 try {
-                    const message = await openAIService.generateResponse(userPrompt);
-                    if (message === null) {
+                    const respMessage = await openAIService.generateResponse(userPrompt);
+
+                    if (respMessage?.jsonMessage !== null) {
+
+                        // validate json
+                        let parsedJson: any;
+                        try {
+                            parsedJson = JSON.parse(respMessage?.jsonMessage as string);
+
+                            // TODO save all enrichment data to the database, into separate collection, with finishReason and refusal
+
+                        } catch (error) {
+                            logger.error('Failed to parse response as JSON:', error);
+                        }
+
+                    } else {
                         logger.error('NULL message from openai service');
-                        continue;
                     }
-                    logger.info('response: ', message);
+
+                    logger.info('response: ', respMessage?.jsonMessage);
                     logger.info('***********************************************************************');
+
                 } catch (error) {
                     logger.error('Error during classification:', error);
-                    logger.info('-----');
+                    logger.error('-----');
                     if (error.message) {
                         logger.error('error.message:', error.message);
                     }
-                    
-                    logger.info('eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
+
+                    logger.error('eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
                 }
-                
-                // doc['classification'] = classification;
-               
-                
+
             } else {
                 logger.warn('empty content');
             }
